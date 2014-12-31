@@ -1,11 +1,14 @@
 package org.test.byteinspector.repository;
 
+import org.test.byteinspector.model.MethodDefContainer;
 import org.test.byteinspector.model.MethodStatistics;
 
+import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.Queue;
+import java.util.concurrent.*;
 
 /**
  * Created by serkan on 30.12.2014.
@@ -13,7 +16,14 @@ import java.util.concurrent.ConcurrentMap;
 public enum StatisticsRepository {
     INSTANCE;
 
-    private Map<String, MethodStatistics> statsMap = new HashMap<>();
+    private BlockingQueue<MethodDefContainer> queue;
+
+    private ConcurrentMap<String, MethodStatistics> statsMap;
+
+    StatisticsRepository() {
+        queue = new LinkedBlockingQueue<>();
+        statsMap = new ConcurrentHashMap<>();
+    }
 
     public void put(MethodStatistics stats) {
         String methodName = stats.getMethodName();
@@ -24,20 +34,18 @@ public enum StatisticsRepository {
         return statsMap.get(methodName);
     }
 
-    public void invokeEvent(String methodName) {
-        System.out.println("############INVOKE EVENT###########");
-        MethodStatistics m = statsMap.get(methodName);
-        if (m != null) {
-            synchronized (m) {
-                Double invokeCount = m.get("invokeCount");
-                invokeCount++;
-                m.put("invokeCount", invokeCount);
-            }
-        }
+    public void invokeEvent(String clazzName, String methodName) {
+        System.out.println("INVOKED CLASS : " + clazzName);
+        System.out.println("INVOKED METHOD : " + methodName);
+        queue.add(new MethodDefContainer(clazzName, methodName));
     }
 
     public Map<String, MethodStatistics> getStats() {
         return statsMap;
+    }
+
+    public BlockingQueue<MethodDefContainer> queue() {
+        return queue;
     }
 
 }

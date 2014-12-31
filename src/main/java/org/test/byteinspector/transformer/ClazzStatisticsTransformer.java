@@ -20,28 +20,39 @@ import java.util.Set;
  */
 public class ClazzStatisticsTransformer implements ClassFileTransformer {
 
-    private Set<String> visited = new HashSet<>();
-
     public ClazzStatisticsTransformer() {
     }
 
     @Override
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
         byte[] byteCode;
+//        if (className.startsWith("com/intellij")) {
+//            return classfileBuffer;
+//        }
         try {
             ClassPool cp = ClassPool.getDefault();
             cp.appendClassPath(new LoaderClassPath(loader));
             cp.appendClassPath(new LoaderClassPath(getClass().getClassLoader()));
-            CtClass cc = cp.get(className.replace("/", "."));
+            String clazz = className.replace("/", ".");
+            CtClass cc = cp.get(clazz);
             CtMethod[] methods = cc.getMethods();
             for (CtMethod method : methods) {
                 if (!Modifier.isNative(method.getModifiers()) &&
-                        !visited.contains(method.getLongName()) &&
                         !method.getLongName().contains("Launcher") &&
                         !method.getLongName().contains("StatisticsRepository")) {
-                    String insertCode = "org.test.byteinspector.repository.StatisticsRepository.INSTANCE.invokeEvent(\"" + method.getLongName() + "\");";
+                    StringBuilder buffer = new StringBuilder();
+                    String name = method.getName();
+                    buffer.append(name + "|");
+                    CtClass[] parameterTypes = method.getParameterTypes();
+                    for (CtClass parameterType : parameterTypes) {
+                        String paramName = parameterType.getName();
+                        buffer.append(paramName);
+                        buffer.append(",");
+                    }
+                    String methodSig = buffer.toString();
+                    methodSig = methodSig.substring(0, methodSig.length() - 1);
+                    String insertCode = "org.test.byteinspector.repository.StatisticsRepository.INSTANCE.invokeEvent(\"" + clazz + "\",\"" + methodSig + "\");";
                     method.insertBefore(insertCode);
-                    visited.add(method.getLongName());
                 }
             }
             byteCode = cc.toBytecode();
