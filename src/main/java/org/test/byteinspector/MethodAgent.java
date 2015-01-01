@@ -1,7 +1,7 @@
 package org.test.byteinspector;
 
 import org.test.byteinspector.repository.StatisticsRepository;
-import org.test.byteinspector.repository.StatsManager;
+import org.test.byteinspector.orchestration.StatsManager;
 import org.test.byteinspector.transformer.ClazzStatisticsTransformer;
 
 import java.lang.instrument.Instrumentation;
