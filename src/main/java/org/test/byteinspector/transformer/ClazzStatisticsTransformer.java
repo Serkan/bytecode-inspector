@@ -26,9 +26,9 @@ public class ClazzStatisticsTransformer implements ClassFileTransformer {
     @Override
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
         byte[] byteCode;
-//        if (className.startsWith("com/intellij")) {
-//            return classfileBuffer;
-//        }
+        if (className.startsWith("com/intellij") || className.startsWith("org/test")) {
+            return classfileBuffer;
+        }
         try {
             ClassPool cp = ClassPool.getDefault();
             cp.appendClassPath(new LoaderClassPath(loader));
@@ -46,6 +46,7 @@ public class ClazzStatisticsTransformer implements ClassFileTransformer {
                     CtClass[] parameterTypes = method.getParameterTypes();
                     for (CtClass parameterType : parameterTypes) {
                         String paramName = parameterType.getName();
+                        paramName = paramName.replace("/", ".");
                         buffer.append(paramName);
                         buffer.append(",");
                     }

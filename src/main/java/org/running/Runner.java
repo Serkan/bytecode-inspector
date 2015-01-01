@@ -1,4 +1,4 @@
-package org.test.byteinspector;
+package org.running;
 
 /**
  * Created by serkan on 31.12.2014.

@@ -3,11 +3,19 @@ package org.test.byteinspector.repository;
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.generic.*;
+import org.apache.commons.lang.StringUtils;
+import org.test.byteinspector.model.ClassFileLocation;
 import org.test.byteinspector.model.MethodStatistics;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLDecoder;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by serkan on 31.12.2014.
@@ -25,30 +33,35 @@ public class StatsTask implements Runnable {
 
     @Override
     public void run() {
-        //TODO check method evaluated before or first time gets here
-        // TODO then either increase invokeCount or calculate method statistics
-//        Method reflectedMethod = getReflectedMethod(clazzName, methodName);
-//        MethodStatistics methodStatistics = calculate(reflectedMethod);
-//        MethodStatistics m = statsMap.get(methodName);
-//        if (m == null) {
-//            m = new MethodStatistics(methodName);
-//            m.put("invokeCount", 0d);
-//            statsMap.put(methodName, m);
-//        }
-//        synchronized (m) {
-//            Double invokeCount = m.get("invokeCount");
-//            invokeCount++;
-//            m.put("invokeCount", invokeCount);
-//        }
+        MethodStatistics methodStatistics = StatisticsRepository.INSTANCE.get(methodName);
+        if (methodStatistics == null) {
+            Method reflectedMethod = null;
+            try {
+                reflectedMethod = getReflectedMethod(clazzName, methodName);
+                methodStatistics = calculate(reflectedMethod);
+            } catch (ClassNotFoundException | NoSuchMethodException | NoSuchElementException e) {
+                throw new RuntimeException(e);
+            }
+            methodStatistics.invokeEvent();
+            StatisticsRepository.INSTANCE.put(methodStatistics);
+        } else {
+            methodStatistics.invokeEvent();
+        }
     }
 
     private MethodStatistics calculate(Method method) {
+        ClassFileLocation location = null;
         ClassParser parser;
         JavaClass clazz;
         try {
-            parser = new ClassParser(clazzName);
+            location = getLocation(clazzName);
+            if (location.isZip()) {
+                parser = new ClassParser(location.getZipName(), location.getFileName());
+            } else {
+                parser = new ClassParser(location.getFileName());
+            }
             clazz = parser.parse();
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
         org.apache.bcel.classfile.Method bcelMethod = clazz.getMethod(method);
@@ -107,6 +120,7 @@ public class StatsTask implements Runnable {
         stats.put("fieldAccessCount", Double.valueOf(fieldAccessCount));
         stats.put("branchCount", Double.valueOf(branchCount));
         stats.put("loopCount", Double.valueOf(loopCount));
+        stats.put("methodLength", Double.valueOf(methodLength));
         return stats;
     }
 
@@ -119,13 +133,105 @@ public class StatsTask implements Runnable {
             String[] paramTypes = paramStr.split(",");
             Class<?>[] paramClazzArray = new Class<?>[paramTypes.length];
             for (int i = 0; i < paramTypes.length; i++) {
-                Class<?> paramClazz = Class.forName(paramTypes[i]);
+                String paramClazzName = paramTypes[i];
+                Class<?> paramClazz = null;
+                // "[Ljava.lang.String;"
+                if (paramClazzName.endsWith("[]")) {
+                    if (paramClazzName.equals("int")) {
+                        paramClazzName = "[I";
+                    } else if (paramClazzName.startsWith("float")) {
+                        paramClazzName = "[F";
+                    } else if (paramClazzName.startsWith("double")) {
+                        paramClazzName = "[D";
+                    } else if (paramClazzName.startsWith("char")) {
+                        paramClazzName = "[C";
+                    } else if (paramClazzName.startsWith("byte")) {
+                        paramClazzName = "[B";
+                    } else if (paramClazzName.startsWith("long")) {
+                        paramClazzName = "[J";
+                    } else if (paramClazzName.startsWith("short")) {
+                        paramClazzName = "[S";
+                    } else if (paramClazzName.startsWith("boolean")) {
+                        paramClazzName = "[Z";
+                    } else {
+                        paramClazzName = "[L" + paramClazzName.substring(0, paramClazzName.length() - 2) + ";";
+                    }
+                } else if (paramClazzName.equals("int")) {
+                    paramClazz = int.class;
+                } else if (paramClazzName.equals("float")) {
+                    paramClazz = float.class;
+                } else if (paramClazzName.equals("double")) {
+                    paramClazz = double.class;
+                } else if (paramClazzName.equals("char")) {
+                    paramClazz = char.class;
+                } else if (paramClazzName.equals("byte")) {
+                    paramClazz = byte.class;
+                } else if (paramClazzName.equals("long")) {
+                    paramClazz = long.class;
+                } else if (paramClazzName.equals("short")) {
+                    paramClazz = short.class;
+                } else if (paramClazzName.equals("boolean")) {
+                    paramClazz = boolean.class;
+                }
+                if (paramClazz == null) {
+                    paramClazz = Class.forName(paramClazzName);
+                }
                 paramClazzArray[i] = paramClazz;
             }
-            method = clazz.getMethod(signature[0], paramClazzArray);
+            method = clazz.getDeclaredMethod(signature[0], paramClazzArray);
         } else {
-            method = clazz.getMethod(methodName);
+            method = clazz.getDeclaredMethod(methodName);
         }
         return method;
     }
+
+    public static String replaceLast(String input, String regex, String replacement) {
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(input);
+        if (!matcher.find()) {
+            return input;
+        }
+        int lastMatchStart = 0;
+        do {
+            lastMatchStart = matcher.start();
+        } while (matcher.find());
+        matcher.find(lastMatchStart);
+        StringBuffer sb = new StringBuffer(input.length());
+        matcher.appendReplacement(sb, replacement);
+        matcher.appendTail(sb);
+        return sb.toString();
+    }
+
+    private ClassFileLocation getLocation(String clazzName) throws ClassNotFoundException {
+        Class<?> c = Class.forName(clazzName);
+        ClassLoader loader = getClass().getClassLoader();
+        String resourceName = clazzName.replace(".", "/") + ".class";
+        if (loader == null) {
+            loader = ClassLoader.getSystemClassLoader().getParent();
+        }
+        URL resource = loader.getResource(resourceName);
+        String url = resource.toString();
+        //jar:file:/home/serkan/IdeaProjects/testproject/target/testproject-1.0-SNAPSHOT.jar!/org/test/App.class
+        //file:/home/serkan/IdeaProjects/testproject/target/classes/org/test/App.class
+        String prefix;
+        ClassFileLocation location;
+        if (url.startsWith("jar")) {
+            prefix = "jar:file";
+            url = url.replace(prefix, "");
+            String[] parts = url.split("!");
+            String zipLocation = parts[0];
+            zipLocation = zipLocation.substring(1, zipLocation.length());
+            String fileLocation = parts[1];
+            fileLocation = fileLocation.substring(1, fileLocation.length());
+            location = new ClassFileLocation();
+            location.setZip(true);
+            location.setZipName(zipLocation);
+            location.setFileName(fileLocation);
+        } else {
+            // TODO
+            throw new UnsupportedOperationException();
+        }
+        return location;
+    }
+
 }

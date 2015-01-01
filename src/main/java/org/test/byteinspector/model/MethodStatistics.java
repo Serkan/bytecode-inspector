@@ -7,23 +7,31 @@ import java.util.HashMap;
  */
 public class MethodStatistics extends HashMap<String, Double> {
 
-    private String methodName;
+    private CalculationState state;
 
-    private boolean isComplete = false;
+    private String methodName;
 
     public MethodStatistics(String methodName) {
         this.methodName = methodName;
+        this.state = CalculationState.CALCULATING;
     }
 
     public String getMethodName() {
         return methodName;
     }
 
-    public boolean isComplete() {
-        return isComplete;
+    public CalculationState getState() {
+        return state;
     }
 
-    public void setComplete(boolean isComplete) {
-        this.isComplete = isComplete;
+    public void setState(CalculationState state) {
+        this.state = state;
     }
+
+    public void invokeEvent() {
+        Double invokeCount = this.get("invokeCount");
+        invokeCount++;
+        this.put("invokeCount", invokeCount);
+    }
+
 }
