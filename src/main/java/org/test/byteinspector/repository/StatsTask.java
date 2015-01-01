@@ -1,9 +1,11 @@
 package org.test.byteinspector.repository;
 
 import org.apache.bcel.classfile.ClassParser;
+import org.apache.bcel.classfile.Code;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.generic.*;
 import org.apache.commons.lang.StringUtils;
+import org.test.byteinspector.model.CalculationException;
 import org.test.byteinspector.model.ClassFileLocation;
 import org.test.byteinspector.model.MethodStatistics;
 
@@ -41,6 +43,9 @@ public class StatsTask implements Runnable {
                 methodStatistics = calculate(reflectedMethod);
             } catch (ClassNotFoundException | NoSuchMethodException | NoSuchElementException e) {
                 throw new RuntimeException(e);
+            } catch (CalculationException e) {
+                // no need to proceed further
+                return;
             }
             methodStatistics.invokeEvent();
             StatisticsRepository.INSTANCE.put(methodStatistics);
@@ -49,7 +54,7 @@ public class StatsTask implements Runnable {
         }
     }
 
-    private MethodStatistics calculate(Method method) {
+    private MethodStatistics calculate(Method method) throws CalculationException {
         ClassFileLocation location = null;
         ClassParser parser;
         JavaClass clazz;
@@ -65,7 +70,11 @@ public class StatsTask implements Runnable {
             throw new RuntimeException(e);
         }
         org.apache.bcel.classfile.Method bcelMethod = clazz.getMethod(method);
-        int methodLength = bcelMethod.getCode().getLength();
+        if (bcelMethod == null) {
+            throw new CalculationException("Bcel method can not be obtained");
+        }
+        Code methodCode = bcelMethod.getCode();
+        int methodLength = methodCode.getLength();
         ConstantPoolGen cpg = new ConstantPoolGen(clazz.getConstantPool());
         MethodGen mg = new MethodGen(bcelMethod, clazz.getClassName(), cpg);
         InstructionList instructionList = mg.getInstructionList();
@@ -137,7 +146,7 @@ public class StatsTask implements Runnable {
                 Class<?> paramClazz = null;
                 // "[Ljava.lang.String;"
                 if (paramClazzName.endsWith("[]")) {
-                    if (paramClazzName.equals("int")) {
+                    if (paramClazzName.startsWith("int")) {
                         paramClazzName = "[I";
                     } else if (paramClazzName.startsWith("float")) {
                         paramClazzName = "[F";
@@ -185,25 +194,7 @@ public class StatsTask implements Runnable {
         return method;
     }
 
-    public static String replaceLast(String input, String regex, String replacement) {
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(input);
-        if (!matcher.find()) {
-            return input;
-        }
-        int lastMatchStart = 0;
-        do {
-            lastMatchStart = matcher.start();
-        } while (matcher.find());
-        matcher.find(lastMatchStart);
-        StringBuffer sb = new StringBuffer(input.length());
-        matcher.appendReplacement(sb, replacement);
-        matcher.appendTail(sb);
-        return sb.toString();
-    }
-
     private ClassFileLocation getLocation(String clazzName) throws ClassNotFoundException {
-        Class<?> c = Class.forName(clazzName);
         ClassLoader loader = getClass().getClassLoader();
         String resourceName = clazzName.replace(".", "/") + ".class";
         if (loader == null) {
