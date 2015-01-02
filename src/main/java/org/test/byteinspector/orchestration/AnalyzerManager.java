@@ -1,5 +1,6 @@
 package org.test.byteinspector.orchestration;
 
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.test.byteinspector.model.MethodStatistics;
 import org.test.byteinspector.repository.StatisticsRepository;
 
@@ -9,6 +10,8 @@ import java.util.*;
  * Created by serkan on 01.01.2015.
  */
 public class AnalyzerManager extends Thread {
+
+    public static final Double NORMALIZIATION_FACTOR = 100000d;
 
     private Map<String, Double> sum = new HashMap<>();
 
@@ -30,9 +33,10 @@ public class AnalyzerManager extends Thread {
         int clusterCount = (int) Math.round(Math.sqrt(n / 2));
 
         // pick random centroids
-        MethodStatistics methodStatistics = (MethodStatistics) stats.entrySet().toArray()[0];
+        String key = (String) stats.keySet().toArray()[0];
+        MethodStatistics methodStatistics = stats.get(key);
         Set<String> attributeList = methodStatistics.keySet();
-        List<MethodStatistics> centroids = randomK(clusterCount, attributeList);
+        List<MethodStatistics> centroids = randomK(clusterCount);
         List<MethodStatistics> reCalculatedCentroids = null;
 
         // key is the clusterId, value is the count of data points in that cluster
@@ -46,7 +50,8 @@ public class AnalyzerManager extends Thread {
             Collection<MethodStatistics> values = stats.values();
             // initialize sum hash table to calculate new centroids
             // key is the clusterId, value is the method statistics which attribute values are totals intra-cluster
-            Map<Integer, MethodStatistics> totals = new HashMap<>(clusterCount);
+            Map<Integer, MethodStatistics> totals;
+            totals = new HashMap<>(clusterCount);
             clusterSizes = new HashMap<>(clusterCount);
             for (int i = 0; i < clusterCount; i++) {
                 MethodStatistics total = new MethodStatistics("TOTAL" + i);
@@ -72,19 +77,48 @@ public class AnalyzerManager extends Thread {
             reCalculatedCentroids = new LinkedList<>();
             for (Map.Entry<Integer, MethodStatistics> totalEntry : totals.entrySet()) {
                 Integer clusterId = totalEntry.getKey();
-                MethodStatistics clusterTotal = totalEntry.getValue();
                 Integer clusterSize = clusterSizes.get(clusterId);
+                if (clusterSize == 0) {
+                    continue;
+                }
+                MethodStatistics clusterTotal = totalEntry.getValue();
                 MethodStatistics newCentroid = new MethodStatistics("DUMMY");
                 for (Map.Entry<String, Double> attributeEntry : clusterTotal.entrySet()) {
                     String attrName = attributeEntry.getKey();
                     Double attrVal = attributeEntry.getValue();
-                    newCentroid.put(attrName, attrVal / clusterSize);
+                    if (attrVal != 0) {
+                        newCentroid.put(attrName, attrVal / clusterSize);
+                    } else {
+                        newCentroid.put(attrName, 0d);
+                    }
                 }
+                newCentroid.setClusterId(clusterId);
                 reCalculatedCentroids.add(newCentroid);
             }
         } while (!centroids.equals(reCalculatedCentroids));
         // find candidate clusters to send JIT
+        // outlier clusters by invokeCount attribute
+        // iterate centroids
+        SummaryStatistics summaryStatistics = new SummaryStatistics();
+        for (MethodStatistics centroid : reCalculatedCentroids) {
+            Double invokeCount = centroid.get("invokeCount");
+            summaryStatistics.addValue(invokeCount);
+        }
+        double upperLimit = summaryStatistics.getMean() + summaryStatistics.getStandardDeviation() * 2;
+        List<Integer> candidateClusters = new LinkedList<>();
+        System.out.println("-----------------Clusters : ------------------------");
+        for (MethodStatistics centroid : reCalculatedCentroids) {
+            System.out.println("Cluster ID : " + centroid.getClusterId() + " - " + clusterSizes.get(centroid.getClusterId()));
 
+//            Double invokeCount = centroid.get("invokeCount");
+//            if (invokeCount > upperLimit) {
+//                candidateClusters.add(centroid.getClusterId());
+//            }
+        }
+//        System.out.println("Cadidate Clusters : ");
+//        for (Integer candidateCluster : candidateClusters) {
+//            System.out.print(candidateCluster + ",");
+//        }
     }
 
     private void assignToClosestCentroid(MethodStatistics statistics, List<MethodStatistics> centroids) {
@@ -100,14 +134,18 @@ public class AnalyzerManager extends Thread {
         }
     }
 
-    private List<MethodStatistics> randomK(int centroidCount, Set<String> attributeList) {
+    private List<MethodStatistics> randomK(int centroidCount) {
+        Map<String, MethodStatistics> stats = StatisticsRepository.INSTANCE.getStats();
+        Object[] objects = stats.keySet().toArray();
         List<MethodStatistics> centroids = new LinkedList<>();
         Random rnd = new Random();
         for (int i = 0; i < centroidCount; i++) {
+            String key = (String) objects[rnd.nextInt(objects.length)];
+            MethodStatistics methodStatistics = stats.get(key);
+            // copy randomly selected point and change its name and clusterId
             MethodStatistics randomCent = new MethodStatistics("DUMMY");
-            for (String attribute : attributeList) {
-                randomCent.put(attribute, rnd.nextDouble());
-            }
+            randomCent.putAll(methodStatistics);
+
             randomCent.setClusterId(i);
             centroids.add(randomCent);
         }
@@ -150,7 +188,7 @@ public class AnalyzerManager extends Thread {
                 if (statSum == 0) {
                     continue;
                 }
-                methodStats.put(statName, statValue / statSum);
+                methodStats.put(statName, (statValue / statSum) * NORMALIZIATION_FACTOR);
             }
         }
     }

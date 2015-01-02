@@ -20,6 +20,7 @@ public class MethodStatistics extends HashMap<String, Double> {
         this.state = CalculationState.CALCULATING;
     }
 
+
     public String getMethodName() {
         return methodName;
     }

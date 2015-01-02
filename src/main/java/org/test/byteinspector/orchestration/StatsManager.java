@@ -24,7 +24,7 @@ public class StatsManager extends Thread {
     @Override
     public void run() {
         BlockingQueue<MethodDefContainer> queue = statisticsRepository.queue();
-        while (stop++ < 10000) {
+        while (stop++ < 100000) {
             MethodDefContainer methodDefContainer = null;
             try {
                 methodDefContainer = queue.take();
@@ -34,26 +34,6 @@ public class StatsManager extends Thread {
             StatsTask task = new StatsTask(methodDefContainer.getClazzName(), methodDefContainer.getMethodName());
             task.run();
         }
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
-        System.out.println("########################Analyzer Started");
         AnalyzerManager analyzer = new AnalyzerManager();
         analyzer.start();
     }
