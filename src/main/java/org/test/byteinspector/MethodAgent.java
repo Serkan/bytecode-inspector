@@ -8,6 +8,20 @@ import java.lang.instrument.Instrumentation;
 
 /**
  * Instrumentation agent entry point.
+ * <p/>
+ * Usage :
+ * <p/>
+ * <code>
+ * -Xbootclasspath/p:<bytecode-inspector>.jar
+ * -javaagent:<bytecode-inspector>.jar
+ * </code>
+ * <p/>
+ * both parameter must be specified when running
+ * the jvm; <code>-Xbootclasspath</code> parameter tells the
+ * bootstrap class loader recognize the bytcode
+ * inspector classes otherwise {@link java.lang.NoClassDefFoundError} occurs,
+ * <code>-javaagent</code> parametes specifies this is a
+ * instrumentation agent look for agent entry point "premain" method.
  *
  * @author serkan
  */
