@@ -16,6 +16,7 @@ public class StatsManager extends Thread {
     private int stop = 0;
 
     public StatsManager() {
+        //TODO must be daeman in prod environment
 //        this.setDaemon(true);
         this.setName("Stats Manager Thread");
         statisticsRepository = StatisticsRepository.INSTANCE;

@@ -1,7 +1,10 @@
 package org.test.byteinspector.model;
 
 /**
- * Created by serkan on 01.01.2015.
+ * Data structure to hold class file location
+ * and how is located (is in a jar file or not).
+ *
+ * @author serkan
  */
 public class ClassFileLocation {
 

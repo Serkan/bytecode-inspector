@@ -1,10 +1,17 @@
 package org.test.byteinspector.model;
 
 /**
- * Created by serkan on 01.01.2015.
+ * Checked exception to represent error in statistics calculation.
+ *
+ * @author serkan
  */
 public class CalculationException extends Exception {
 
+    /**
+     * Default constructor.
+     *
+     * @param s exception message to pass
+     */
     public CalculationException(String s) {
         super(s);
     }

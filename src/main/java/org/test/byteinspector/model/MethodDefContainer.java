@@ -1,7 +1,9 @@
 package org.test.byteinspector.model;
 
 /**
- * Created by serkan on 31.12.2014.
+ * Data structure to hold method name and which class it belongs to.
+ *
+ * @author serkan
  */
 public class MethodDefContainer {
 

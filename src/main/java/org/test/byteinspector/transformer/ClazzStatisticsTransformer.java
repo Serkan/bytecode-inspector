@@ -16,30 +16,38 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Created by serkan on 30.12.2014.
+ * Class file to transformer, injects monitoring code to method body.
+ *
+ * @author serkan
  */
 public class ClazzStatisticsTransformer implements ClassFileTransformer {
 
-    public ClazzStatisticsTransformer() {
-    }
-
+    /**
+     * @see java.lang.instrument.ClassFileTransformer
+     */
     @Override
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
         byte[] byteCode;
+        // test environment check and make sure u dont change agent code otherwise agent enters infinite loop
         if (className.startsWith("com/intellij") || className.startsWith("org/test")) {
             return classfileBuffer;
         }
         try {
             ClassPool cp = ClassPool.getDefault();
+            // javasist needs to know where to find reflected class
             cp.appendClassPath(new LoaderClassPath(loader));
             cp.appendClassPath(new LoaderClassPath(getClass().getClassLoader()));
+            // tiny correction from file path to class name
             String clazz = className.replace("/", ".");
             CtClass cc = cp.get(clazz);
             CtMethod[] methods = cc.getMethods();
             for (CtMethod method : methods) {
+                // we do not want interfere native methods because they already compiled
+                // or change logic of sun launcher classes, otherwise application can not start
                 if (!Modifier.isNative(method.getModifiers()) &&
                         !method.getLongName().contains("Launcher") &&
                         !method.getLongName().contains("StatisticsRepository")) {
+                    // build a string that contains class name, method name and method signature
                     StringBuilder buffer = new StringBuilder();
                     String name = method.getName();
                     buffer.append(name + "|");
@@ -51,7 +59,9 @@ public class ClazzStatisticsTransformer implements ClassFileTransformer {
                         buffer.append(",");
                     }
                     String methodSig = buffer.toString();
+                    // clear trailing comma
                     methodSig = methodSig.substring(0, methodSig.length() - 1);
+                    // inject monitoring code method beginning point
                     String insertCode = "org.test.byteinspector.repository.StatisticsRepository.INSTANCE.invokeEvent(\"" + clazz + "\",\"" + methodSig + "\");";
                     method.insertBefore(insertCode);
                 }
@@ -59,6 +69,9 @@ public class ClazzStatisticsTransformer implements ClassFileTransformer {
             byteCode = cc.toBytecode();
             cc.detach();
         } catch (Exception ex) {
+            // even we throw a runtime exception in case of error,
+            // Instrumentation manager do not let agent thread failed completely,
+            // ignores any exception and move on silently (without printing any message)
             throw new RuntimeException(ex);
         }
         return byteCode;

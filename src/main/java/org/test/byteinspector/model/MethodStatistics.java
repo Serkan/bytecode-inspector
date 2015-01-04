@@ -5,7 +5,12 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Created by serkan on 30.12.2014.
+ * Data structure to hold method statistics. It is subclass
+ * of {@link java.util.HashMap} because instead of staticly
+ * keep statistic data, this structure let client classes
+ * dynamic implementations which can adapt change of attributes.
+ *
+ * @author serkan
  */
 public class MethodStatistics extends HashMap<String, Double> {
 
@@ -41,6 +46,14 @@ public class MethodStatistics extends HashMap<String, Double> {
         this.clusterId = clusterId;
     }
 
+    /**
+     * Arithmetic add operation. Important thing
+     * is this method does not return a new instance
+     * instead modifies the object itself but do not
+     * affect given method statistics.
+     *
+     * @param other right side of add operation
+     */
     public void add(MethodStatistics other) {
         Set<Map.Entry<String, Double>> entries = other.entrySet();
         for (Map.Entry<String, Double> entry : entries) {
@@ -51,6 +64,10 @@ public class MethodStatistics extends HashMap<String, Double> {
         }
     }
 
+    /**
+     * Invocation event is responsible to alter
+     * some attributeswhen the event occurs.
+     */
     public void invokeEvent() {
         Double invokeCount = this.get("invokeCount");
         invokeCount++;

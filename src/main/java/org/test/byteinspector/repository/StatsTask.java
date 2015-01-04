@@ -20,7 +20,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Created by serkan on 31.12.2014.
+ * It is responsible for extracting features from a class method.
+ * If a method structure analyzed before it just calls invoke event
+ * to change live statistics belongs to that method. Implemented as a
+ * {@link java.lang.Runnable} task thus it can be used multi thread
+ * environment.
+ *
+ * @author serkan
  */
 public class StatsTask implements Runnable {
 
@@ -54,6 +60,15 @@ public class StatsTask implements Runnable {
         }
     }
 
+    /**
+     * It produces method statistics for specified method instance.
+     * Apache bytecode engineering library heavily used to obtain
+     * bytecode information. Counts the bytecode to calculate statistics.
+     *
+     * @param method method instance
+     * @return method stats
+     * @throws CalculationException if bytecode can not obtained somehow
+     */
     private MethodStatistics calculate(Method method) throws CalculationException {
         ClassFileLocation location = null;
         ClassParser parser;
@@ -133,6 +148,19 @@ public class StatsTask implements Runnable {
         return stats;
     }
 
+    /**
+     * Finds the {@link java.lang.reflect.Method} object for
+     * specified class name and method name. Method name must
+     * be a specific format for appropriate result. For instance,
+     * for replace method of {@link java.lang.String} method name
+     * formatted as "replace|char,char" to represent the full signature.
+     *
+     * @param clazzName  class name
+     * @param methodName method name formatted as described
+     * @return reflected {@link java.lang.reflect.Method} method instance
+     * @throws ClassNotFoundException if can not find the reflected class
+     * @throws NoSuchMethodException  if can not find reflected method
+     */
     private Method getReflectedMethod(String clazzName, String methodName) throws ClassNotFoundException, NoSuchMethodException {
         Class<?> clazz = Class.forName(clazzName);
         Method method;
@@ -145,7 +173,9 @@ public class StatsTask implements Runnable {
                 String paramClazzName = paramTypes[i];
                 Class<?> paramClazz = null;
                 // "[Ljava.lang.String;"
+                // if parameters is an array type change it appropriate string
                 if (paramClazzName.endsWith("[]")) {
+                    // for primitive array type specific representations must be used
                     if (paramClazzName.startsWith("int")) {
                         paramClazzName = "[I";
                     } else if (paramClazzName.startsWith("float")) {
@@ -163,8 +193,12 @@ public class StatsTask implements Runnable {
                     } else if (paramClazzName.startsWith("boolean")) {
                         paramClazzName = "[Z";
                     } else {
+                        // for class arrays [L prefix and ; suffix is necessary format
                         paramClazzName = "[L" + paramClazzName.substring(0, paramClazzName.length() - 2) + ";";
                     }
+                    // for primitive parameters type primitive class type
+                    // must be obtained in runtime,
+                    // boxed versions class name does not work
                 } else if (paramClazzName.equals("int")) {
                     paramClazz = int.class;
                 } else if (paramClazzName.equals("float")) {
@@ -194,9 +228,18 @@ public class StatsTask implements Runnable {
         return method;
     }
 
-    private ClassFileLocation getLocation(String clazzName) throws ClassNotFoundException {
+    /**
+     * Locates the class file for given class name.
+     * For instance for a string "java.lang.Integer" finds
+     * the jar file and exact location in the jar file.
+     *
+     * @param clazzName class name
+     * @return ClassFileLocation that contains where and how located .class file.
+     */
+    private ClassFileLocation getLocation(String clazzName) {
         ClassLoader loader = getClass().getClassLoader();
         String resourceName = clazzName.replace(".", "/") + ".class";
+        // if there is no class loader, obtain the bootstrap class loader
         if (loader == null) {
             loader = ClassLoader.getSystemClassLoader().getParent();
         }

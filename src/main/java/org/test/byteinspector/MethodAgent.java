@@ -7,10 +7,19 @@ import org.test.byteinspector.transformer.ClazzStatisticsTransformer;
 import java.lang.instrument.Instrumentation;
 
 /**
- * Created by serkan on 30.12.2014.
+ * Instrumentation agent entry point.
+ *
+ * @author serkan
  */
 public class MethodAgent {
 
+    /**
+     * Main method for agent, responsible to start statistics engine and monitoring threads.
+     *
+     * @param agentArgs       agent arguments
+     * @param instrumentation instrumentation instance
+     * @throws InterruptedException
+     */
     public static void premain(String agentArgs, Instrumentation instrumentation) throws InterruptedException {
         StatisticsRepository instance = StatisticsRepository.INSTANCE;
         instrumentation.addTransformer(new ClazzStatisticsTransformer());
