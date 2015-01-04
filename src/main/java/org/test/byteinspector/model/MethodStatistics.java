@@ -14,15 +14,12 @@ import java.util.Set;
  */
 public class MethodStatistics extends HashMap<String, Double> {
 
-    private CalculationState state;
-
     private String methodName;
 
     private int clusterId;
 
     public MethodStatistics(String methodName) {
         this.methodName = methodName;
-        this.state = CalculationState.CALCULATING;
     }
 
 
@@ -30,13 +27,6 @@ public class MethodStatistics extends HashMap<String, Double> {
         return methodName;
     }
 
-    public CalculationState getState() {
-        return state;
-    }
-
-    public void setState(CalculationState state) {
-        this.state = state;
-    }
 
     public int getClusterId() {
         return clusterId;
