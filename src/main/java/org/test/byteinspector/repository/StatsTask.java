@@ -135,7 +135,7 @@ public class StatsTask implements Runnable {
                 }
             }
         }
-        MethodStatistics stats = new MethodStatistics(methodName);
+        MethodStatistics stats = new MethodStatistics(clazzName + "." + methodName);
         stats.put("localVariableTableSize", Double.valueOf(localVariableTableSize));
         stats.put("invokeCount", Double.valueOf(invokeCount));
         stats.put("newOpCount", Double.valueOf(newOpCount));

@@ -40,6 +40,7 @@ public class StatsManager extends Thread {
             StatsTask task = new StatsTask(methodDefContainer.getClazzName(), methodDefContainer.getMethodName());
             task.run();
         }
+        System.out.println("Analysis started");
         AnalyzerManager analyzer = new AnalyzerManager();
         analyzer.start();
     }

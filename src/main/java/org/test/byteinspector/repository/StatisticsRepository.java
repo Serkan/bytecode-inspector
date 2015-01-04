@@ -53,8 +53,7 @@ public enum StatisticsRepository {
     }
 
     public void invokeEvent(String clazzName, String methodName) {
-        System.out.println("INVOKED CLASS : " + clazzName);
-        System.out.println("INVOKED METHOD : " + methodName);
+//        System.out.println("INVOKED EVENT : " + clazzName + "->" + methodName);
         queue.add(new MethodDefContainer(clazzName, methodName));
     }
 

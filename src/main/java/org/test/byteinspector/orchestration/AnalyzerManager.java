@@ -4,7 +4,6 @@ import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.test.byteinspector.model.MethodStatistics;
 import org.test.byteinspector.repository.StatisticsRepository;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
@@ -22,8 +21,11 @@ public class AnalyzerManager extends Thread {
 
     @Override
     public void run() {
+        System.out.println("Normalization started");
         normalize();
+        System.out.println("Clustering started");
         cluster();
+        System.out.println("Dumping results");
         dumpResults();
     }
 
@@ -35,11 +37,12 @@ public class AnalyzerManager extends Thread {
             for (Map.Entry<String, MethodStatistics> entry : stats.entrySet()) {
                 StringBuilder buffer = new StringBuilder();
                 buffer.append(entry.getKey());
-                buffer.append(",");
+                buffer.append("\t\t");
                 buffer.append(entry.getValue().getClusterId());
                 // end line char
                 buffer.append("\n");
                 writer.write(buffer.toString());
+                writer.flush();
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

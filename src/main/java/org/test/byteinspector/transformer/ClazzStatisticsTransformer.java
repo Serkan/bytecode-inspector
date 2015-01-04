@@ -29,18 +29,24 @@ public class ClazzStatisticsTransformer implements ClassFileTransformer {
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
         byte[] byteCode;
         // test environment check and make sure u dont change agent code otherwise agent enters infinite loop
-        if (className.startsWith("com/intellij") || className.startsWith("org/test")) {
+        if (className.startsWith("com/intellij") ||
+                className.startsWith("org/test") ||
+                className.startsWith("javassist/") ||
+                className.startsWith("sun/instrument") ||
+                className.startsWith("org/apache/bcel") ||
+                className.startsWith("java/util/jar")) {
             return classfileBuffer;
         }
         try {
-            ClassPool cp = ClassPool.getDefault();
+            ClassPool cp = new ClassPool(true);
             // javasist needs to know where to find reflected class
             cp.appendClassPath(new LoaderClassPath(loader));
             cp.appendClassPath(new LoaderClassPath(getClass().getClassLoader()));
             // tiny correction from file path to class name
+            CtMethod[] methods;
             String clazz = className.replace("/", ".");
             CtClass cc = cp.get(clazz);
-            CtMethod[] methods = cc.getMethods();
+            methods = cc.getMethods();
             for (CtMethod method : methods) {
                 // we do not want interfere native methods because they already compiled
                 // or change logic of sun launcher classes, otherwise application can not start
