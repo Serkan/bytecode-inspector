@@ -7,13 +7,15 @@ import org.test.byteinspector.repository.StatisticsRepository;
 import java.util.*;
 
 /**
- * Created by serkan on 01.01.2015.
+ * Data analyzer thread responsible for running
+ * clustering algorithm and produce the results.
+ *
+ * @author serkan
  */
 public class AnalyzerManager extends Thread {
 
-    public static final Double NORMALIZIATION_FACTOR = 100000d;
-
-    private Map<String, Double> sum = new HashMap<>();
+    // to scale all attribute values 0-NORMALIZATION_FACTOR range
+    public static final Double NORMALIZATION_FACTOR = 100000d;
 
     @Override
     public void run() {
@@ -21,6 +23,9 @@ public class AnalyzerManager extends Thread {
         cluster();
     }
 
+    /**
+     * K-means clustering algorithm implemented.
+     */
     private void cluster() {
         Map<String, MethodStatistics> stats = StatisticsRepository.INSTANCE.getStats();
         // initial cluster count
@@ -121,6 +126,14 @@ public class AnalyzerManager extends Thread {
 //        }
     }
 
+    /**
+     * It compares distance between given data point
+     * with centroids and assign it minimum distant
+     * centroid's cluster.
+     *
+     * @param statistics data point
+     * @param centroids  list of centroids
+     */
     private void assignToClosestCentroid(MethodStatistics statistics, List<MethodStatistics> centroids) {
         double min = Double.MAX_VALUE;
         for (MethodStatistics centroid : centroids) {
@@ -134,6 +147,13 @@ public class AnalyzerManager extends Thread {
         }
     }
 
+    /**
+     * Produces random k centroid. Instead of produce
+     * random attribute values, select from real data points randomly.
+     *
+     * @param centroidCount how many centroid wanted
+     * @return list of centroids
+     */
     private List<MethodStatistics> randomK(int centroidCount) {
         Map<String, MethodStatistics> stats = StatisticsRepository.INSTANCE.getStats();
         Object[] objects = stats.keySet().toArray();
@@ -152,6 +172,15 @@ public class AnalyzerManager extends Thread {
         return centroids;
     }
 
+    /**
+     * Calculates euclidean distance between
+     * two method statistics objects. It should be
+     * called on normalized values.
+     *
+     * @param m1 first data point
+     * @param m2 second data point
+     * @return distance between two data objects
+     */
     private double distance(MethodStatistics m1, MethodStatistics m2) {
         // Euclidean distance
         double total = 0;
@@ -164,7 +193,11 @@ public class AnalyzerManager extends Thread {
         return Math.sqrt(total);
     }
 
+    /**
+     * Normalize attributes values in range of 0-NORMALIZATION_FACTOR
+     */
     private void normalize() {
+        Map<String, Double> sum = new HashMap<>();
         Map<String, MethodStatistics> stats = StatisticsRepository.INSTANCE.getStats();
         for (Map.Entry<String, MethodStatistics> entry : stats.entrySet()) {
             MethodStatistics methodStats = entry.getValue();
@@ -188,7 +221,7 @@ public class AnalyzerManager extends Thread {
                 if (statSum == 0) {
                     continue;
                 }
-                methodStats.put(statName, (statValue / statSum) * NORMALIZIATION_FACTOR);
+                methodStats.put(statName, (statValue / statSum) * NORMALIZATION_FACTOR);
             }
         }
     }

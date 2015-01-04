@@ -7,7 +7,12 @@ import org.test.byteinspector.repository.StatsTask;
 import java.util.concurrent.BlockingQueue;
 
 /**
- * Created by serkan on 31.12.2014.
+ * This is the method event's queue consumer thread.
+ * It listens consumes queue by taking an event and
+ * run it as {@link org.test.byteinspector.repository.StatsTask}
+ * whenever an event available in the queue.
+ *
+ * @author serkan
  */
 public class StatsManager extends Thread {
 
