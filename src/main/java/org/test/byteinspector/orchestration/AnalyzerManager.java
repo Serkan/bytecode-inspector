@@ -33,12 +33,18 @@ public class AnalyzerManager extends Thread {
         Map<String, MethodStatistics> stats = StatisticsRepository.INSTANCE.getStats();
         FileWriter writer;
         try {
-            writer = new FileWriter("/home/serkan/dev/results/clustering_dump");
+            writer = new FileWriter("/home/serkan/dev/results/clustering_dump.txt");
             for (Map.Entry<String, MethodStatistics> entry : stats.entrySet()) {
                 StringBuilder buffer = new StringBuilder();
                 buffer.append(entry.getKey());
-                buffer.append("\t\t");
+                buffer.append("&");
                 buffer.append(entry.getValue().getClusterId());
+                buffer.append("&");
+                MethodStatistics attributes = entry.getValue();
+                for (Double val : attributes.values()) {
+                    buffer.append(val);
+                    buffer.append("&");
+                }
                 // end line char
                 buffer.append("\n");
                 writer.write(buffer.toString());

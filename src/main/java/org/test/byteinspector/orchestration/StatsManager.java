@@ -5,6 +5,7 @@ import org.test.byteinspector.repository.StatisticsRepository;
 import org.test.byteinspector.repository.StatsTask;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This is the method event's queue consumer thread.
@@ -31,14 +32,18 @@ public class StatsManager extends Thread {
     public void run() {
         BlockingQueue<MethodDefContainer> queue = statisticsRepository.queue();
         while (stop++ < 100000) {
-            MethodDefContainer methodDefContainer = null;
             try {
-                methodDefContainer = queue.take();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                MethodDefContainer methodDefContainer = null;
+                try {
+                    methodDefContainer = queue.take();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                StatsTask task = new StatsTask(methodDefContainer.getClazzName(), methodDefContainer.getMethodName());
+                task.run();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-            StatsTask task = new StatsTask(methodDefContainer.getClazzName(), methodDefContainer.getMethodName());
-            task.run();
         }
         System.out.println("Analysis started");
         AnalyzerManager analyzer = new AnalyzerManager();

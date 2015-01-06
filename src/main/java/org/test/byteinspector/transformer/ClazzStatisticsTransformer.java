@@ -29,12 +29,11 @@ public class ClazzStatisticsTransformer implements ClassFileTransformer {
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
         byte[] byteCode;
         // test environment check and make sure u dont change agent code otherwise agent enters infinite loop
-        if (className.startsWith("com/intellij") ||
-                className.startsWith("org/test") ||
+        if (className.startsWith("org/test") ||
                 className.startsWith("javassist/") ||
                 className.startsWith("sun/instrument") ||
-                className.startsWith("org/apache/bcel") ||
-                className.startsWith("java/util/jar")) {
+                className.startsWith("org/apache/bcel") /*||
+                className.startsWith("java/util/concurrent/locks/LockSupport/park") */) {
             return classfileBuffer;
         }
         try {

@@ -35,11 +35,9 @@ public class MethodAgent {
      * @throws InterruptedException
      */
     public static void premain(String agentArgs, Instrumentation instrumentation) throws InterruptedException {
-        StatisticsRepository instance = StatisticsRepository.INSTANCE;
-        instrumentation.addTransformer(new ClazzStatisticsTransformer());
         StatsManager manager = new StatsManager();
-        Thread.currentThread().sleep(1000);
         manager.start();
+        instrumentation.addTransformer(new ClazzStatisticsTransformer());
     }
 
 }
